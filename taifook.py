@@ -3,14 +3,15 @@
 Created on Mon Aug 22 14:46:48 2016
 
 @author: yiran.zhou
+@description: 基于主要是Pandas和numpy的数据处理函数库
 """
 
 import pandas as pd
 import numpy as np
 
 # 计算一组数据对应的区间，用来做分组的histogram
-# 输入待处理的series, 分组的间距，分组的最大最小值，左闭右开还是左开右闭
-# 输出一个新的数列cut，作为分组的key, 格式为'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'
+# 输入:待处理的series, 分组的间距，分组的最大最小值，左闭右开还是左开右闭
+# 输出:一个新的数列cut，作为分组的key, 格式为'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'
 def histoCut(s, step, maxN = None, minN = None, leftClose = True):
     cut = []
     maxN = np.ceil(s.max() / step) * step if maxN == None else maxN
@@ -40,8 +41,8 @@ def histoCut(s, step, maxN = None, minN = None, leftClose = True):
     return cut
     
 # 给histogram的索引排序
-# 输入是一个以histogram cut为索引的dataframe，索引的格式是'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'
-# 输出是排完序的dataframe
+# 输入:是一个以histogram cut为索引的dataframe，索引的格式是'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'
+# 输出:是排完序的dataframe
 # 相关func：histoCut
 def histoSort(df, ascending = True):
     tmpIdx = 'tmpIdx'
@@ -67,16 +68,19 @@ def histoSort(df, ascending = True):
     df = df.drop(tmpIdx, axis = 1)
     return df
 
-# 计算一组数据中最后一个数据的Z-score, 输入是series（dataframe的列）
+# 计算一组数据中最后一个数据的Z-score
+# 输入:是series（dataframe的列）
+# 输出：最后一个数据的Z-score
 def zscore(s):
     zs = (s[-1] - s.mean()) / s.std()
     return zs
 
-# dataframe的rolling函数, 对指定的列做rolling，生产新的列，返回一个新的df
-# colNames指定df里面需要rolling的列，newColNames是新生成的列的名字，funcList是处理rolling的函数
+# dataframe的rolling函数, 对指定的列做rolling，生产新的列，返回增加列之后的原df
+# 输入：colNames指定df里面需要rolling的列，newColNames是新生成的列的名字，funcList是处理rolling的函数
 # funcList里面的每个函数输入是Series，输出是单一值
 # funcList,colNames和newColNames的数量需相等
 # span有正负，正表示未来的x days，负表示过去的x days，均包含当前日期
+# 输出：增加新生成列之后的原df，会产生nan
 def rolling(df, span, funcList, colNames, newColNames):
     i = 0
     # 对每一个需要处理的列进行循环
