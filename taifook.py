@@ -9,36 +9,45 @@ Created on Mon Aug 22 14:46:48 2016
 import pandas as pd
 import numpy as np
 
-# 计算一组数据对应的区间，用来做分组的histogram
+# 计算一组数据对应的所属区间，用来做分组的histogram
 # 输入:待处理的series, 分组的间距，分组的最大最小值，左闭右开还是左开右闭
-# 输出:一个新的数列cut，作为分组的key, 格式为'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'
+# 输出:一个新的数列cut，作为分组的key, 每个key的格式为'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'
 def histoCut(s, step, maxN = None, minN = None, leftClose = True):
     cut = []
     maxN = np.ceil(s.max() / step) * step if maxN == None else maxN
     minN = np.floor(s.min() / step) * step if minN == None else minN
-    if leftClose == True: #左闭右开 [ )
-        for e in s:
-            if e >= maxN:
-                cut.append('>= ' + str(maxN))
-            elif e < minN:
-                cut.append('< ' + str(minN))
-            else:
-                upper = np.ceil(e / step) * step
-                lower = np.floor(e / step) * step
-                upper = upper + step if upper == lower else upper
-                cut.append(str(lower) + ' ~ ' + str(upper))    
-    else:   #左开右闭 ( ]
-        for e in s:
-            if e > maxN:
-                cut.append('> ' + str(maxN))
-            elif e < minN:
-                cut.append('<= ' + str(minN))
-            else:
-                upper = np.ceil(e / step) * step
-                lower = np.floor(e / step) * step
-                lower = lower - step if upper == lower else lower
-                cut.append(str(lower) + ' ~ ' + str(upper))     
+    for e in s:
+        cut.append(histoCutKey(e, step, maxN, minN, leftClose))
     return cut
+    
+# 计算某个值所属的区间
+# 输入:单个数字
+# 输出: string，作为分组的key, 格式为'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'   
+def histoCutKey(e, step, maxN = None, minN = None, leftClose = True):
+    key = ''
+    maxN = e + 1 if maxN == None else maxN #如果不指定max、min，必然生成'X ~ Y'格式
+    minN = e - 1 if minN == None else minN
+    if leftClose == True: #左闭右开 [ )
+        if e >= maxN:
+            key = '>= ' + str(maxN)
+        elif e < minN:
+            key = '< ' + str(minN)
+        else:
+            upper = np.ceil(e / step) * step
+            lower = np.floor(e / step) * step
+            upper = upper + step if upper == lower else upper
+            key = str(lower) + ' ~ ' + str(upper)
+    else:   #左开右闭 ( ]
+        if e > maxN:
+            key = '> ' + str(maxN)
+        elif e < minN:
+            key = '<= ' + str(minN)
+        else:
+            upper = np.ceil(e / step) * step
+            lower = np.floor(e / step) * step
+            lower = lower - step if upper == lower else lower
+            key = str(lower) + ' ~ ' + str(upper)
+    return key
     
 # 给histogram的索引排序
 # 输入:是一个以histogram cut为索引的dataframe，索引的格式是'< X' or '<= X'、'X ~ Y'、'> Y' or '>= Y'
@@ -74,6 +83,13 @@ def histoSort(df, ascending = True):
 def zscore(s):
     zs = (s[-1] - s.mean()) / s.std()
     return zs
+    
+# 计算一组数据中正值的比率（包括0） 
+# 输入：series（dataframe的列）
+# 输出：正值比率
+def posPct(s):
+    pct = s[s>=0].count() / s.count()    
+    return pct
 
 # dataframe的rolling函数, 对指定的列做rolling，生产新的列，返回增加列之后的原df
 # 输入：colNames指定df里面需要rolling的列，newColNames是新生成的列的名字，funcList是处理rolling的函数
