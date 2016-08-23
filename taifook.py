@@ -92,8 +92,8 @@ def posPct(s):
     return pct
 
 # dataframe的rolling函数, 对指定的列做rolling，生产新的列，返回增加列之后的原df
-# 输入：colNames指定df里面需要rolling的列，newColNames是新生成的列的名字，funcList是处理rolling的函数
-# funcList里面的每个函数输入是Series，输出是单一值
+# 输入：colNames指定df里面需要rolling的列的list，newColNames是新生成的列的名字的list，funcList是处理rolling的函数
+# funcList里面的每个函数输入是一个Series，输出是单一值。如果要输入多个Series，使用rollingND函数
 # funcList,colNames和newColNames的数量需相等
 # span有正负，正表示未来的x days，负表示过去的x days，均包含当前日期
 # 输出：增加新生成列之后的原df，会产生nan
@@ -123,3 +123,38 @@ def rolling(df, span, funcList, colNames, newColNames):
         # 继续下一列
         i += 1
     return df
+    
+# dataframe的rolling函数, 对指定的复数列做rolling，生产新的单一列，返回增加列之后的原df
+# 输入：colNames指定df里面需要rolling的列，newColName是新生成的列的名字，func是处理rolling的函数
+# func输入是dataframe(复数Series)，输出是单一值
+# span有正负，正表示未来的x days，负表示过去的x days，均包含当前日期
+# 输出：增加新生成列之后的原df，会产生nan
+# 和rolling的区别：
+#rolling可以同时处理多个列，每个列应用不同的函数，生成同样多的列，但是每个rolling函数只能读入一个列。
+#rollingND(N-Dimension)只能生成一列，应用一个rolling函数，但是这个函数可以读入多个列。
+def rollingND(df, span, func, colNames, newColName):
+    cols = df[colNames]
+    # 根据span设定初始rolling范围
+    if span < 0: # 往前rolling过去的数据
+        idx = 0 - span - 1 # 指向当前的日期
+        startIdx = 0 # rolling开始的日期
+        endIdx = idx # rolling结束的日期
+    else: # 往后rolling未来的数据
+        idx = 0
+        startIdx = idx
+        endIdx = startIdx + span - 1
+    # 对列进行rolling操作
+    while endIdx < len(df.index):
+        interval = np.arange(startIdx, endIdx + 1)
+        rollingData = cols.ix[cols.index[interval]]
+        df.ix[idx, newColName] = func(rollingData)
+        idx +=1
+        startIdx +=1
+        endIdx +=1
+    return df
+        
+        
+        
+        
+        
+        
