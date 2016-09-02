@@ -153,7 +153,18 @@ def rollingND(df, span, func, colNames, newColName):
         endIdx +=1
     return df
         
-        
+# 计算一组任意日期的附近时间范围内的指定日期，比如找出这组日期之后一周内的周五，类似于偏移时间数列
+# 输入：一组pd.DatetimeIndex， 周围的日期范围，指定的日期
+# 输出： 一组pd.DatetimeIndex
+def findNearbyDate(timeIdx, shiftDate, freq):
+    timeIdxShift = timeIdx.shift(shiftDate, 'D')     
+    l = []
+    i = 0
+    while i < len(timeIdx):
+        l.append(pd.date_range(timeIdx[i], timeIdxShift[i], freq = freq)[0])
+        i += 1
+    l = pd.DatetimeIndex(l)
+    return l
         
         
         
