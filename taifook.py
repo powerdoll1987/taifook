@@ -8,6 +8,10 @@ Created on Mon Aug 22 14:46:48 2016
 
 import pandas as pd
 import numpy as np
+from pandas.tseries.offsets import Day
+from matplotlib.pylab import date2num
+import matplotlib.pyplot as plt
+import matplotlib.finance as mpf
 
 # 计算一组数据对应的所属区间，用来做分组的histogram
 # 输入:待处理的series, 分组的间距，分组的最大最小值，左闭右开还是左开右闭
@@ -169,6 +173,92 @@ def findNearbyDate(timeIdx, shiftDate, freq):
     l = pd.DatetimeIndex(l)
     return l
         
+
+# 找到给定一组时间之后一段时间内的符合某个条件的日期和数值，比如找之后一个月内的最大跌幅
+# 输入： 一个dataframe，包含日期和价格，pxColName, 价格列的名称， 一个pd.DatetimeIndex(需要是dataframe.index的子集),
+#  一个条件函数（min（）），一组日期偏移量（[7,14,28]），列名称后缀('Low')
+# 输出：一个新的dataframe包含找到的数值和日期
+def findConditionalValue(df, pxColName, timeIdx, func, dateSftLst, suffixStr):
+    
+    # 设定columns的列名称, 包含3个数据：价格，时间，变化百分比
+    i = 0
+    cols = [pxColName]
+    while i < len(dateSftLst):
+        cols.append(str(dateSftLst[i]) + 'D ' +  suffixStr)
+        cols.append(str(dateSftLst[i]) + 'D ' +  suffixStr + 'Date')
+        cols.append(str(dateSftLst[i]) + 'D ' +  suffixStr + 'Pct Chg')
+        i += 1
+    
+    # 把时间序列和对应的价格放到新的结果的df里面  
+    res = pd.DataFrame(columns = cols, index = timeIdx)
+    res[pxColName] = df.ix[timeIdx, pxColName]
+    
+    # 找出给定条件的时间和价格
+    k = 0
+    while k < len(timeIdx):
         
+        StartDay = res.index[k]
+        j = 0
+        while j < len(dateSftLst):
+            endDate = min(StartDay + Day(dateSftLst[j]), df.index[-1])
+            pxCond = func(df.ix[StartDay:endDate, pxColName])
+            pxCondDate = df[df[pxColName] == pxCond].index[0]
+            pxPctChg = pxCond / res.ix[k, pxColName] - 1        
+            
+            res.ix[k, j*3] = pxCond
+            res.ix[k, j*3+1] = pxCondDate
+            res.ix[k, j*3+2] = pxPctChg
+            
+            j += 1
         
+        k += 1
+    return res
         
+# 把dataframe转换成list格式。matplotlib可以用这个list来画蜡烛图
+# 输入：dataframe的index是日期，columns是'Open', 'Close','Low','High'
+# 输出：list，每个元素是一个tuple，顺序是(t,open,high,low,close)
+def df2OHLC(df):
+    
+    data_lst = []
+    i = 0
+    while i < len(df.index):
+        dt = df.index[i].to_datetime()
+        t = date2num(dt)
+        Open = df.ix[i, 'Open']
+        Close = df.ix[i, 'Close']
+        Low = df.ix[i, 'Low']
+        High = df.ix[i, 'High']
+        data = (t, Open, High,Low, Close)
+        data_lst.append(data)        
+        
+        i += 1
+    return data_lst
+
+# 画蜡烛图
+# 输入：df2OHLC的结果
+def darwCandleChart(lst):
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(bottom=0.2)
+    # 设置X轴刻度为日期时间
+    ax.xaxis_date()
+    plt.xticks(rotation=45)
+    plt.yticks()
+    plt.title("candle stick")
+    plt.xlabel("Date")
+    plt.ylabel("Price")
+    mpf.candlestick_ohlc(ax,lst,width=0.5,colorup='r',colordown='g')
+    plt.grid()
+    
+# 通过月份找合约的月份代码
+def month2ticker(m):
+    idx = [1,2,3,4,5,6,7,8,9,10,11,12]
+    data = list('FGHJKMNQUVXZ')    
+    df = pd.DataFrame(data, index = idx, columns = ['symbol'])
+    return df.ix[m, 'symbol']
+
+# 通过月份代码找合约月份
+def ticker2month(s):    
+    data = [1,2,3,4,5,6,7,8,9,10,11,12]
+    idx = list('FGHJKMNQUVXZ')    
+    df = pd.DataFrame(data, index = idx, columns = ['month'])
+    return df.ix[s, 'month']
